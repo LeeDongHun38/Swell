@@ -27,7 +27,7 @@ class Item(Base):
     item_id = Column(BigInteger, primary_key=True, autoincrement=True)
     item_name = Column(String(255), nullable=False)
     item_type = Column(
-        Enum("상의", "하의", "아우터", name="item_type_enum"),
+        Enum("top", "bottom", "outer", name="item_type_enum"),
         nullable=False,
     )
     brand_name_ko = Column(String(100))
