@@ -13,7 +13,7 @@ CREATE TABLE Users (
 CREATE TABLE Items (
     item_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     item_name VARCHAR(255) NOT NULL,
-    item_type ENUM('상의', '하의', '아우터') NOT NULL,
+    item_type ENUM('top', 'bottom', 'outer') NOT NULL,
     brand_name_ko VARCHAR(100),
     price DECIMAL(10, 2),
     purchase_url VARCHAR(1024),
