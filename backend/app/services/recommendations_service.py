@@ -90,6 +90,7 @@ async def _get_recommended_coordi_ids_temporary(
     total_items = db.execute(count_query).scalar_one()
     
     # 페이지네이션 적용
+    # TODO: 여기에 추천 모델 적용
     coordis = db.execute(
         base_query
         .order_by(Coordi.created_at.desc())
@@ -212,7 +213,7 @@ async def get_recommended_coordis(
     db: Session,
     user_id: int,
     page: int = 1,
-    limit: int = 10,
+    limit: int = 20,
 ) -> tuple[list[OutfitPayload], PaginationPayload]:
     """
     사용자 맞춤 코디 목록을 조회합니다.

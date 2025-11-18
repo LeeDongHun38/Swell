@@ -27,7 +27,7 @@ router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
 )
 async def get_recommendations(
     page: int = Query(default=1, ge=1, description="페이지 번호"),
-    limit: int = Query(default=10, ge=1, le=50, description="페이지당 개수"),
+    limit: int = Query(default=20, ge=1, le=50, description="페이지당 개수"),
     authorization: str = Header(...),
     db: Session = Depends(get_db),
 ) -> RecommendationsResponse:

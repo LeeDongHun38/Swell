@@ -849,14 +849,14 @@ HCI Fashion API
 
 **Request:**
 - **Method:** `GET`
-- **URL:** `{{api_base}}/recommendations?page=1&limit=10`
+- **URL:** `{{api_base}}/recommendations?page=1&limit=20`
 - **Headers:**
   ```
   Authorization: Bearer {{token}}
   ```
 - **Query Parameters:**
   - `page` (optional): 페이지 번호 (기본값: 1, 최소: 1)
-  - `limit` (optional): 페이지당 개수 (기본값: 10, 최소: 1, 최대: 50)
+  - `limit` (optional): 페이지당 개수 (기본값: 20, 최소: 1, 최대: 50)
 - **Body**: 없음
 
 **Expected Response (200 OK):**
@@ -931,12 +931,12 @@ HCI Fashion API
 
 1. **성공 케이스 - 기본 파라미터**
    - 유효한 토큰으로 요청
-   - Query Parameters 없음 (기본값 사용: page=1, limit=10)
+   - Query Parameters 없음 (기본값 사용: page=1, limit=20)
    - Expected: 200 OK, outfits 배열과 pagination 정보 반환
    - 사용자 성별에 맞는 코디만 반환됨
 
 2. **성공 케이스 - 페이지 지정**
-   - URL: `{{api_base}}/recommendations?page=2&limit=10`
+   - URL: `{{api_base}}/recommendations?page=2&limit=20`
    - Expected: 200 OK, 두 번째 페이지의 코디 반환
 
 3. **성공 케이스 - limit 조정**

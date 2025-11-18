@@ -18,6 +18,7 @@ from app.models.user import User
 GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY", "") 
 GEMINI_MODEL = "gemini-2.5-flash"  # Gemini 모델 이름
 TIMEOUT_SECONDS = 15.0  # 타임아웃 설정
+# TODO: 15초가 적당함
 
 
 def _generate_sync(
