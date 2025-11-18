@@ -1,5 +1,6 @@
 # --- API framework & ASGI ---
 fastapi==0.121.0
+fastapi-cli==0.1.0
 uvicorn[standard]==0.38.0
 
 # --- Database ---
@@ -14,6 +15,7 @@ alembic==1.13.2
 python-dotenv==1.2.1
 pydantic==2.12.3
 pydantic-settings==2.6.0
+email-validator==2.1.1  # Pydantic EmailStr 타입을 위한 이메일 검증 라이브러리
 
 # --- Security ---
 PyJWT==2.9.0

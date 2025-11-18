@@ -18,13 +18,13 @@ class Coordi(Base):
 
     coordi_id = Column(BigInteger, primary_key=True, autoincrement=True)
     season = Column(
-        Enum("SPRING", "SUMMER", "FALL", "WINTER", name="coordi_season_enum")
+        Enum("spring", "summer", "fall", "winter", name="coordi_season_enum")
     )
     style = Column(
-        Enum("CASUAL", "STREET", "SPORTY", "MINIMAL", name="coordi_style_enum")
+        Enum("casual", "street", "sporty", "minimal", name="coordi_style_enum")
     )
     gender = Column(
-        Enum("MALE", "FEMALE", name="coordi_gender_enum"),
+        Enum("male", "female", name="coordi_gender_enum"),
         comment="코디 대상 성별",
     )
     description = Column(Text, comment="태그 포함 설명 문구")

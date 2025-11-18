@@ -92,10 +92,20 @@ def register_exception_handlers(app: FastAPI) -> None:
             if loc and loc[-1] == "password" and error_type == "string_too_short":
                 message = "비밀번호가 8자 이상이여야합니다"
                 break
+            if loc and loc[-1] == "gender" and error_type == "missing":
+                message = "성별을 선택해주세요"
+                break
 
-        return await app_exception_handler(
-            request,
-            ValidationError(message=message),
+        # ValidationError 형식으로 직접 응답 반환
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                "success": False,
+                "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": message or "요청 유효성 검증에 실패했습니다.",
+                },
+            },
         )
     
     # 비즈니스 로직에서 발생하는 예외 핸들러(DuplicateEmailError, InvalidCredentialsError, UnauthorizedError, ValidationError, ItemNotFoundError 등)
