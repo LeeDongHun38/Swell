@@ -33,12 +33,16 @@ def register_user(db: Session, payload: UserCreateRequest) -> User:
     if len(payload.password) < 8:
         raise ValidationError(message="비밀번호는 8자 이상이어야 합니다")
 
+    # 성별 필수 검증
+    if payload.gender is None:
+        raise ValidationError(message="성별을 선택해주세요")
+
     # 사용자 생성
     user = User(
         email=payload.email, # 이메일
         password_hash=hash_password(payload.password),
         name=payload.name, # 이름
-        gender=payload.gender.value if payload.gender else None, # 성별
+        gender=payload.gender.value, # 성별 (필수)
         preferred_tags=payload.preferred_tags, # 선호 태그
     )
 

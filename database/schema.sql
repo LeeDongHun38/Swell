@@ -4,8 +4,8 @@ CREATE TABLE Users (
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     name VARCHAR(100),
-    gender ENUM('MALE', 'FEMALE') COMMENT '사용자 성별',
-    preferred_tags TEXT COMMENT '사용자 선호 태그 (콤마 구분 텍스트)',
+    gender ENUM('male', 'female') COMMENT '사용자 성별',
+    preferred_tags TEXT COMMENT '사용자 선호 태그 (JSON 배열 형식으로 저장)',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -25,9 +25,9 @@ CREATE TABLE Items (
 /* 3. 크롤링으로 수집한 코디 */
 CREATE TABLE Coordis (
     coordi_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    season ENUM('SPRING', 'SUMMER', 'FALL', 'WINTER') COMMENT '4계절 (필터링용)',
-    style ENUM('CASUAL', 'STREET', 'SPORTY', 'MINIMAL') COMMENT '코디 무드/스타일',
-    gender ENUM('MALE', 'FEMALE') COMMENT '코디 대상 성별',
+    season ENUM('spring', 'summer', 'fall', 'winter') COMMENT '4계절 (필터링용)',
+    style ENUM('casual', 'street', 'sporty', 'minimal') COMMENT '코디 무드/스타일',
+    gender ENUM('male', 'female') COMMENT '코디 대상 성별',
     description TEXT COMMENT '태그 포함 설명 문구',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_coordis_season_style (season, style),
@@ -38,7 +38,7 @@ CREATE TABLE Coordis (
 CREATE TABLE Fitting_Results (
     fitting_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,
-    status ENUM('PROCESSING', 'COMPLETED', 'FAILED') DEFAULT 'PROCESSING' COMMENT '피팅 작업 상태',
+    status ENUM('processing', 'completed', 'failed') DEFAULT 'processing' COMMENT '피팅 작업 상태',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_fitting_results_user (user_id),
     FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
@@ -116,7 +116,7 @@ CREATE TABLE Coordi_Items (
 CREATE TABLE User_Coordi_Interactions (
     user_id BIGINT NOT NULL,
     coordi_id BIGINT NOT NULL,
-    action_type ENUM('LIKE', 'SKIP') NOT NULL,
+    action_type ENUM('like', 'skip', 'preference') NOT NULL,
     interacted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, coordi_id),
     INDEX idx_user_coordi_interactions_coordi (coordi_id, action_type),

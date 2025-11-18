@@ -31,13 +31,13 @@ class FittingResult(Base):
     )
     status = Column(
         Enum(
-            "PROCESSING",
-            "COMPLETED",
-            "FAILED",
+            "processing",
+            "completed",
+            "failed",
             name="fitting_result_status_enum",
         ),
         nullable=False,
-        server_default="PROCESSING",
+        server_default="processing",
         comment="피팅 작업 상태",
     )
     created_at = Column(DateTime(timezone=True), server_default=func.now())

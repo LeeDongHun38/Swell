@@ -11,8 +11,8 @@ from pydantic import BaseModel, EmailStr, Field
 
 
 class UserGender(str, Enum):
-    MALE = "MALE"
-    FEMALE = "FEMALE"
+    male = "male"
+    female = "female"
 
 
 # 사용자 회원가입 요청 스키마

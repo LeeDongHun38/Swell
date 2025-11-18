@@ -12,7 +12,7 @@ FastAPI 기반 추천 시스템 백엔드.
 ```bash
 cd backend
 
-# 1) 가상환경 생성 및 활성화(if use Mac brew: /opt/homebrew/bin/python3.11 -m venv .venv) 
+# 1) 가상환경 생성 및 활성화(if use Mac brew: /opt/homebrew/bin/python3.11 -m venv .venv -> python3.11기반을 사용하기 위해) 
 python -m venv .venv    
 source .venv/bin/activate    # Windows: .venv\Scripts\activate
                             
