@@ -76,6 +76,36 @@ class ItemNotFoundError(AppException):
     def __init__(self) -> None:
         super().__init__(message="아이템을 찾을 수 없습니다")
 
+# 코디 없음 예외
+class OutfitNotFoundError(AppException):
+    """요청한 코디가 존재하지 않을 때 발생하는 예외."""
+
+    code = "OUTFIT_NOT_FOUND"
+    status_code = status.HTTP_404_NOT_FOUND
+
+    def __init__(self) -> None:
+        super().__init__(message="코디를 찾을 수 없습니다")
+
+# 이미 좋아요한 코디 예외
+class AlreadyFavoritedError(AppException):
+    """이미 좋아요한 코디에 다시 좋아요를 추가할 때 발생하는 예외."""
+
+    code = "ALREADY_FAVORITED"
+    status_code = status.HTTP_409_CONFLICT
+
+    def __init__(self) -> None:
+        super().__init__(message="이미 좋아요한 코디입니다")
+
+# 좋아요 없음 예외
+class FavoriteNotFoundError(AppException):
+    """좋아요하지 않은 코디에 대해 취소 요청을 할 때 발생하는 예외."""
+
+    code = "FAVORITE_NOT_FOUND"
+    status_code = status.HTTP_404_NOT_FOUND
+
+    def __init__(self) -> None:
+        super().__init__(message="좋아요하지 않은 코디입니다")
+
 # 해시태그 개수 부족 예외
 class InsufficientHashtagsError(AppException):
     """최소 3개의 해시태그를 선택해야 할 때 발생하는 예외."""
@@ -238,6 +268,22 @@ def register_exception_handlers(app: FastAPI) -> None:
             # 페이지당 개수 검증
             if field_name == "limit" and error_type in ("greater_than_equal", "less_than_equal", "int_parsing"):
                 message = "페이지당 개수는 1 이상 50 이하여야 합니다"
+                break
+            # season 값 검증
+            if field_name == "season" and error_type in ("literal_error", "type_error"):
+                message = "유효하지 않은 season 값입니다. (all, spring, summer, fall, winter 중 하나를 선택해주세요)"
+                break
+            # style 값 검증
+            if field_name == "style" and error_type in ("literal_error", "type_error"):
+                message = "유효하지 않은 style 값입니다. (all, casual, street, sporty, minimal 중 하나를 선택해주세요)"
+                break
+            # gender 값 검증
+            if field_name == "gender" and error_type in ("literal_error", "type_error"):
+                message = "유효하지 않은 gender 값입니다. (all, male, female 중 하나를 선택해주세요)"
+                break
+            # outfitIds 빈 배열 검증
+            if field_name in ("outfitIds", "outfit_ids") and error_type in ("list_too_short", "value_error"):
+                message = "outfitIds는 최소 1개 이상이어야 합니다"
                 break
 
         # ValidationError 형식으로 직접 응답 반환

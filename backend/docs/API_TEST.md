@@ -34,7 +34,8 @@ HCI Fashion API
 │   ├── 4.1 코디 목록 조회
 │   ├── 4.2 코디 좋아요 추가
 │   ├── 4.3 코디 좋아요 취소
-│   └── 4.4 좋아요한 코디 목록 조회
+│   ├── 4.4 좋아요한 코디 목록 조회
+│   └── 4.5 본 코디 스킵 기록
 ├── 5. 옷장 (Closet)
 │   ├── 5.1 옷장에 아이템 저장
 │   ├── 5.2 옷장 아이템 목록 조회
@@ -1002,8 +1003,514 @@ HCI Fashion API
 
 ---
 
+## 4. 코디 목록 조회 (Outfits)
+
+### 4.1 코디 목록 조회 (필터링)
+
+**Request:**
+- **Method:** `GET`
+- **URL:** `{{api_base}}/outfits?season=all&style=all&gender=all&page=1&limit=10`
+- **Headers:**
+  ```
+  Authorization: Bearer {{token}}
+  ```
+- **Query Parameters:**
+  - `season` (optional): 계절 필터 (기본값: "all", 허용값: "all", "spring", "summer", "fall", "winter")
+  - `style` (optional): 스타일 필터 (기본값: "all", 허용값: "all", "casual", "street", "sporty", "minimal")
+  - `gender` (optional): 성별 필터 (기본값: "all", 허용값: "all", "male", "female")
+  - `page` (optional): 페이지 번호 (기본값: 1, 최소: 1)
+  - `limit` (optional): 페이지당 개수 (기본값: 20, 최소: 1, 최대: 50)
+- **Body**: 없음
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "outfits": [
+      {
+        "id": 134314134113,
+        "imageUrl": "/images/outfits/outfit_001.jpg",
+        "gender": "male",
+        "season": "summer",
+        "style": "casual",
+        "description": "편안한 여름 캐주얼",
+        "isFavorited": false,
+        "llmMessage": null,
+        "items": [
+          {
+            "id": 134314314,
+            "category": "top",
+            "brand": "유니클로",
+            "name": "린넨 반팔 셔츠",
+            "price": 39000,
+            "imageUrl": "/images/items/item_001.png",
+            "purchaseUrl": "https://www.uniqlo.com/kr/...",
+            "isSaved": false
+          },
+          {
+            "id": 13455133,
+            "category": "bottom",
+            "brand": "자라",
+            "name": "베이직 치노 팬츠",
+            "price": 49000,
+            "imageUrl": "/images/items/item_002.png",
+            "purchaseUrl": "https://www.zara.com/kr/...",
+            "isSaved": true
+          }
+        ],
+        "createdAt": "2025-10-15T10:00:00Z"
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 10,
+      "totalItems": 95,
+      "hasNext": true,
+      "hasPrev": false
+    }
+  }
+}
+```
+
+**Expected Response (200 OK - 결과 없음):**
+```json
+{
+  "success": true,
+  "data": {
+    "outfits": [],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 0,
+      "totalItems": 0,
+      "hasNext": false,
+      "hasPrev": false
+    }
+  }
+}
+```
+
+**Test Cases:**
+
+1. **성공 케이스 - 기본 파라미터 (모든 필터 "all")**
+   - URL: `{{api_base}}/outfits`
+   - Expected: 200 OK, 모든 코디 반환 (최신순)
+
+2. **성공 케이스 - season 필터링**
+   - URL: `{{api_base}}/outfits?season=summer`
+   - Expected: 200 OK, summer 계절 코디만 반환
+
+3. **성공 케이스 - style 필터링**
+   - URL: `{{api_base}}/outfits?style=casual`
+   - Expected: 200 OK, casual 스타일 코디만 반환
+
+4. **성공 케이스 - gender 필터링**
+   - URL: `{{api_base}}/outfits?gender=female`
+   - Expected: 200 OK, female 성별 코디만 반환
+
+5. **성공 케이스 - 복합 필터링**
+   - URL: `{{api_base}}/outfits?season=summer&style=casual&gender=male`
+   - Expected: 200 OK, 모든 조건을 만족하는 코디만 반환
+
+6. **성공 케이스 - 페이지 지정**
+   - URL: `{{api_base}}/outfits?page=2&limit=10`
+   - Expected: 200 OK, 두 번째 페이지의 코디 반환
+
+7. **성공 케이스 - 결과 없음**
+   - URL: `{{api_base}}/outfits?season=spring&style=minimal&gender=male`
+   - 조건을 만족하는 코디가 없는 경우
+   - Expected: 200 OK, 빈 outfits 배열과 pagination 정보 반환
+
+8. **season 값 오류 - 잘못된 값 (400 Bad Request)**
+   - URL: `{{api_base}}/outfits?season=invalid`
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "VALIDATION_ERROR",
+         "message": "유효하지 않은 season 값입니다. (all, spring, summer, fall, winter 중 하나를 선택해주세요)"
+       }
+     }
+     ```
+
+9. **style 값 오류 - 잘못된 값 (400 Bad Request)**
+   - URL: `{{api_base}}/outfits?style=invalid`
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "VALIDATION_ERROR",
+         "message": "유효하지 않은 style 값입니다. (all, casual, street, sporty, minimal 중 하나를 선택해주세요)"
+       }
+     }
+     ```
+
+10. **gender 값 오류 - 잘못된 값 (400 Bad Request)**
+    - URL: `{{api_base}}/outfits?gender=invalid`
+    - Expected:
+      ```json
+      {
+        "success": false,
+        "error": {
+          "code": "VALIDATION_ERROR",
+          "message": "유효하지 않은 gender 값입니다. (all, male, female 중 하나를 선택해주세요)"
+        }
+      }
+      ```
+
+11. **페이지 번호 오류 - 0 이하 (400 Bad Request)**
+    - URL: `{{api_base}}/outfits?page=0`
+    - Expected:
+      ```json
+      {
+        "success": false,
+        "error": {
+          "code": "VALIDATION_ERROR",
+          "message": "페이지 번호는 1 이상이어야 합니다"
+        }
+      }
+      ```
+
+12. **limit 오류 - 50 초과 (400 Bad Request)**
+    - URL: `{{api_base}}/outfits?limit=51`
+    - Expected:
+      ```json
+      {
+        "success": false,
+        "error": {
+          "code": "VALIDATION_ERROR",
+          "message": "페이지당 개수는 1 이상 50 이하여야 합니다"
+        }
+      }
+      ```
+
+### 4.2 코디 좋아요 추가
+
+**Request:**
+- **Method:** `POST`
+- **URL:** `{{api_base}}/outfits/{outfitId}/favorite`
+- **Headers:**
+  ```
+  Authorization: Bearer {{token}}
+  ```
+- **Path Parameters:**
+  - `outfitId` (required): 코디 고유 ID
+  - ex: 1438903904945349989
+- **Body**: 없음
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "outfitId": 1438903904945349989,
+    "isFavorited": true,
+    "favoritedAt": "2025-11-16T10:00:00Z"
+  }
+}
+```
+
+**Test Cases:**
+
+1. **성공 케이스 - 새로운 코디 좋아요**
+   - 유효한 토큰으로 요청
+   - outfitId: 존재하는 코디 ID
+   - Expected: 200 OK, outfitId, isFavorited=true, favoritedAt 반환
+   - `UserCoordiInteraction` 테이블에 `action_type="like"`로 기록됨
+
+2. **성공 케이스 - skip으로 기록된 코디를 좋아요로 변경**
+   - 유효한 토큰으로 요청
+   - outfitId: 이미 `action_type="skip"`으로 기록된 코디 ID
+   - Expected: 200 OK, 기존 skip 레코드가 like로 업데이트됨
+
+3. **코디 없음 (404 Not Found)**
+   - outfitId: 존재하지 않는 코디 ID (예: 999999999999)
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "OUTFIT_NOT_FOUND",
+         "message": "코디를 찾을 수 없습니다"
+       }
+     }
+     ```
+
+4. **이미 좋아요한 코디 (409 Conflict)**
+   - outfitId: 이미 `action_type="like"`로 기록된 코디 ID
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "ALREADY_FAVORITED",
+         "message": "이미 좋아요한 코디입니다"
+       }
+     }
+     ```
+
+### 4.3 코디 좋아요 취소
+
+**Request:**
+- **Method:** `DELETE`
+- **URL:** `{{api_base}}/outfits/{outfitId}/favorite`
+- **Headers:**
+  ```
+  Authorization: Bearer {{token}}
+  ```
+- **Path Parameters:**
+  - `outfitId` (required): 코디 고유 ID
+  - ex: 1438903904945349989
+- **Body**: 없음
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "outfitId": 1438903904945349989,
+    "isFavorited": false,
+    "unfavoritedAt": "2025-11-16T10:00:00Z"
+  }
+}
+```
+
+**Test Cases:**
+
+1. **성공 케이스 - 좋아요 취소**
+   - 유효한 토큰으로 요청
+   - outfitId: 이미 좋아요한 코디 ID
+   - Expected: 200 OK, outfitId, isFavorited=false, unfavoritedAt 반환
+   - `UserCoordiInteraction` 테이블에서 `action_type="like"` 레코드 삭제됨
+
+2. **코디 없음 (404 Not Found)**
+   - outfitId: 존재하지 않는 코디 ID (예: 999999999999)
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "OUTFIT_NOT_FOUND",
+         "message": "코디를 찾을 수 없습니다"
+       }
+     }
+     ```
+
+3. **좋아요 없음 (404 Not Found)**
+   - outfitId: 좋아요하지 않은 코디 ID
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "FAVORITE_NOT_FOUND",
+         "message": "좋아요하지 않은 코디입니다"
+       }
+     }
+     ```
+---
+
+### 4.4 좋아요한 코디 목록 조회
+
+**Request:**
+- **Method:** `GET`
+- **URL:** `{{api_base}}/outfits/favorites?page=1&limit=20`
+- **Headers:**
+  ```
+  Authorization: Bearer {{token}}
+  ```
+- **Query Parameters:**
+  - `page` (optional): 페이지 번호 (기본값: 1, 최소: 1)
+  - `limit` (optional): 페이지당 개수 (기본값: 20, 최소: 1, 최대: 50)
+- **Body**: 없음
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "outfits": [
+      {
+        "id": 1438903904945349989,
+        "imageUrl": "/images/outfits/outfit_001.jpg",
+        "gender": "male",
+        "season": "summer",
+        "style": "casual",
+        "description": "편안한 여름 캐주얼",
+        "isFavorited": true,
+        "llmMessage": null,
+        "items": [
+          {
+            "id": 134314314,
+            "category": "top",
+            "brand": "유니클로",
+            "name": "린넨 반팔 셔츠",
+            "price": 39000,
+            "imageUrl": "/images/items/item_001.png",
+            "purchaseUrl": "https://www.uniqlo.com/kr/...",
+            "isSaved": false
+          },
+          {
+            "id": 13455133,
+            "category": "bottom",
+            "brand": "자라",
+            "name": "베이직 치노 팬츠",
+            "price": 49000,
+            "imageUrl": "/images/items/item_002.png",
+            "purchaseUrl": "https://www.zara.com/kr/...",
+            "isSaved": true
+          }
+        ],
+        "createdAt": "2025-10-15T10:00:00Z"
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 5,
+      "totalItems": 12,
+      "hasNext": true,
+      "hasPrev": false
+    }
+  }
+}
+```
+
+**Expected Response (200 OK - 결과 없음):**
+```json
+{
+  "success": true,
+  "data": {
+    "outfits": [],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 0,
+      "totalItems": 0,
+      "hasNext": false,
+      "hasPrev": false
+    }
+  }
+}
+```
+
+**Test Cases:**
+
+1. **성공 케이스 - 기본 파라미터**
+   - 유효한 토큰으로 요청
+   - Query Parameters 없음 (기본값 사용: page=1, limit=20)
+   - Expected: 200 OK, outfits 배열과 pagination 정보 반환
+   - 좋아요 추가 일시 기준 최신순으로 정렬됨
+   - 모든 코디의 `isFavorited`가 `true`임
+   - 모든 코디의 `llmMessage`가 `null`임
+
+2. **성공 케이스 - 페이지 지정**
+   - URL: `{{api_base}}/outfits/favorites?page=2&limit=20`
+   - Expected: 200 OK, 두 번째 페이지의 코디 반환
+   - 좋아요 추가 일시 기준 최신순 정렬 유지
+
+3. **성공 케이스 - limit 조정**
+   - URL: `{{api_base}}/outfits/favorites?page=1&limit=12`
+   - Expected: 200 OK, 12개의 코디 반환
+
+4. **성공 케이스 - 결과 없음 (좋아요한 코디가 없는 경우)**
+   - 좋아요한 코디가 없는 사용자
+   - Expected: 200 OK, 빈 outfits 배열과 pagination 정보 반환
+   - `totalItems: 0`, `totalPages: 0`, `hasNext: false`, `hasPrev: false`
+
+5. **성공 케이스 - 좋아요 추가 일시 기준 정렬 확인**
+   - 여러 코디에 좋아요를 추가 (시간 간격을 두고)
+   - Expected: 가장 최근에 좋아요한 코디가 첫 번째로 반환됨
+
+---
+
+### 4.5 본 코디 스킵 기록
+
+**Request:**
+- **Method:** `POST`
+- **URL:** `{{api_base}}/outfits/skip`
+- **Headers:**
+  ```
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+  ```
+- **Body (raw JSON):**
+  ```json
+  {
+    "outfitIds": [1438903904945349989, 1438908516166171660, 1438907945581406350]
+  }
+  ```
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "message": "3개의 코디가 스킵으로 기록되었습니다",
+    "recordedCount": 3,
+    "skippedCount": 0
+  }
+}
+```
+
+**Test Cases:**
+
+1. **성공 케이스 - 새로운 코디 스킵**
+   - 유효한 토큰으로 요청
+   - outfitIds: [123456789, 987654321, 111222333] (3개)
+   - Expected: 200 OK, recordedCount=3, skippedCount=0
+   - `UserCoordiInteraction` 테이블에 `action_type="skip"`으로 기록됨
+
+2. **성공 케이스 - 일부 중복 (이미 skip으로 기록된 코디 포함)**
+   - 유효한 토큰으로 요청
+   - outfitIds: [123456789, 987654321, 111222333]
+   - 123456789는 이미 skip으로 기록됨
+   - Expected: 200 OK, recordedCount=2, skippedCount=1
+   - 중복된 코디는 skippedCount에 포함됨
+
+3. **성공 케이스 - 좋아요가 있는 코디 포함**
+   - 유효한 토큰으로 요청
+   - outfitIds: [123456789, 987654321, 111222333]
+   - 123456789는 이미 `action_type="like"`로 기록됨
+   - Expected: 200 OK, recordedCount=2, skippedCount=1
+   - 좋아요가 있는 코디는 skip으로 변경되지 않음 (좋아요 우선)
+
+4. **성공 케이스 - 좋아요와 중복 모두 포함**
+   - 유효한 토큰으로 요청
+   - outfitIds: [123456789, 987654321, 111222333, 444555666]
+   - 123456789: 이미 like로 기록됨
+   - 987654321: 이미 skip으로 기록됨
+   - Expected: 200 OK, recordedCount=2, skippedCount=2
+   - like와 skip 모두 skippedCount에 포함됨
+
+5. **빈 배열 오류 (400 Bad Request)**
+   - outfitIds: []
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "VALIDATION_ERROR",
+         "message": "outfitIds는 최소 1개 이상이어야 합니다"
+       }
+     }
+     ```
+
+6. **outfitIds 필드 누락 (400 Bad Request)**
+   - Body에서 `outfitIds` 필드 제거
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "VALIDATION_ERROR",
+         "message": "outfitIds는 최소 1개 이상이어야 합니다"
+       }
+     }
+     ```
+---
+
 ## 다음 엔드포인트 추가 예정
 
-- 4.1 코디 목록 조회
 - ... (계속 추가)
 
