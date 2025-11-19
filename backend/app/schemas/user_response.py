@@ -195,3 +195,35 @@ class SkipOutfitsResponse(BaseModel):
     data: SkipOutfitsResponseData
 
 
+# 코디 좋아요 추가 응답 데이터 스키마 1
+class AddFavoriteResponseData(BaseModel):
+    outfit_id: int = Field(alias="outfitId")
+    is_favorited: bool = Field(alias="isFavorited")
+    favorited_at: datetime = Field(alias="favoritedAt")
+
+    class Config:
+        populate_by_name = True
+
+
+# 코디 좋아요 추가 응답 데이터 스키마 2
+class AddFavoriteResponse(BaseModel):
+    success: bool = True
+    data: AddFavoriteResponseData
+
+
+# 코디 좋아요 취소 응답 데이터 스키마 1
+class RemoveFavoriteResponseData(BaseModel):
+    outfit_id: int = Field(alias="outfitId")
+    is_favorited: bool = Field(alias="isFavorited")
+    unfavorited_at: datetime = Field(alias="unfavoritedAt")
+
+    class Config:
+        populate_by_name = True
+
+
+# 코디 좋아요 취소 응답 데이터 스키마 2
+class RemoveFavoriteResponse(BaseModel):
+    success: bool = True
+    data: RemoveFavoriteResponseData
+
+

@@ -4,11 +4,13 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Literal
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.exceptions import AlreadyFavoritedError, FavoriteNotFoundError, OutfitNotFoundError
 from app.models.coordi import Coordi
 from app.models.coordi_item import CoordiItem
 from app.models.item import Item
@@ -357,4 +359,254 @@ def skip_outfits(
     skipped_count = len(liked_coordi_ids) + len(skipped_coordi_ids)
     
     return recorded_count, skipped_count
+
+
+def add_favorite(
+    db: Session,
+    user_id: int,
+    coordi_id: int,
+) -> UserCoordiInteraction:
+    """
+    코디에 좋아요를 추가합니다.
+    
+    Parameters
+    ----------
+    db:
+        데이터베이스 세션
+    user_id:
+        사용자 ID
+    coordi_id:
+        코디 ID
+        
+    Returns
+    -------
+    UserCoordiInteraction:
+        생성된 좋아요 상호작용 레코드
+        
+    Raises
+    ------
+    OutfitNotFoundError:
+        코디가 존재하지 않는 경우
+    AlreadyFavoritedError:
+        이미 좋아요한 코디인 경우
+    """
+    # 1. 코디 존재 여부 확인
+    coordi = db.get(Coordi, coordi_id)
+    if coordi is None:
+        raise OutfitNotFoundError()
+    
+    # 2. 이미 좋아요가 있는지 확인
+    existing_like = db.execute(
+        select(UserCoordiInteraction)
+        .where(
+            UserCoordiInteraction.user_id == user_id,
+            UserCoordiInteraction.coordi_id == coordi_id,
+            UserCoordiInteraction.action_type == "like",
+        )
+    ).scalar_one_or_none()
+    
+    if existing_like is not None:
+        raise AlreadyFavoritedError()
+    
+    # 3. 기존 상호작용 확인 (skip 등 다른 action_type이 있는 경우)
+    existing_interaction = db.execute(
+        select(UserCoordiInteraction)
+        .where(
+            UserCoordiInteraction.user_id == user_id,
+            UserCoordiInteraction.coordi_id == coordi_id,
+        )
+    ).scalar_one_or_none()
+    
+    if existing_interaction is not None:
+        # 기존 상호작용이 있으면 좋아요로 업데이트 (좋아요 우선)
+        existing_interaction.action_type = "like"
+        db.commit()
+        db.refresh(existing_interaction)
+        return existing_interaction
+    
+    # 4. 새로운 좋아요 기록 생성
+    interaction = UserCoordiInteraction(
+        user_id=user_id,
+        coordi_id=coordi_id,
+        action_type="like",
+    )
+    db.add(interaction)
+    db.commit()
+    db.refresh(interaction)
+    
+    return interaction
+
+
+def remove_favorite(
+    db: Session,
+    user_id: int,
+    coordi_id: int,
+) -> tuple[int, datetime]:
+    """
+    코디 좋아요를 취소합니다.
+    
+    Parameters
+    ----------
+    db:
+        데이터베이스 세션
+    user_id:
+        사용자 ID
+    coordi_id:
+        코디 ID
+        
+    Returns
+    -------
+    tuple[int, datetime]:
+        (coordi_id, unfavorited_at)
+        
+    Raises
+    ------
+    OutfitNotFoundError:
+        코디가 존재하지 않는 경우
+    FavoriteNotFoundError:
+        좋아요하지 않은 코디인 경우
+    """
+    # 1. 코디 존재 여부 확인
+    coordi = db.get(Coordi, coordi_id)
+    if coordi is None:
+        raise OutfitNotFoundError()
+    
+    # 2. 좋아요 기록 확인
+    existing_like = db.execute(
+        select(UserCoordiInteraction)
+        .where(
+            UserCoordiInteraction.user_id == user_id,
+            UserCoordiInteraction.coordi_id == coordi_id,
+            UserCoordiInteraction.action_type == "like",
+        )
+    ).scalar_one_or_none()
+    
+    if existing_like is None:
+        raise FavoriteNotFoundError()
+    
+    # 3. 좋아요 기록 삭제
+    unfavorited_at = datetime.now(timezone.utc)
+    db.delete(existing_like)
+    db.commit()
+    
+    return coordi_id, unfavorited_at
+
+
+async def get_favorite_outfits(
+    db: Session,
+    user_id: int,
+    page: int = 1,
+    limit: int = 20,
+) -> tuple[list[OutfitPayload], PaginationPayload]:
+    """
+    사용자가 좋아요한 코디 목록을 조회합니다.
+    
+    Parameters
+    ----------
+    db:
+        데이터베이스 세션
+    user_id:
+        사용자 ID
+    page:
+        페이지 번호 (1부터 시작)
+    limit:
+        페이지당 개수
+        
+    Returns
+    -------
+    tuple[list[OutfitPayload], PaginationPayload]:
+        (코디 페이로드 리스트, 페이지네이션 정보)
+    """
+    # 1. 전체 개수 조회
+    total_items = db.execute(
+        select(func.count(UserCoordiInteraction.coordi_id))
+        .where(
+            UserCoordiInteraction.user_id == user_id,
+            UserCoordiInteraction.action_type == "like",
+        )
+    ).scalar_one()
+    
+    # 결과가 없으면 빈 결과 반환
+    if total_items == 0:
+        return [], PaginationPayload(
+            currentPage=page,
+            totalPages=0,
+            totalItems=0,
+            hasNext=False,
+            hasPrev=False,
+        )
+    
+    # 2. 페이지네이션 적용하여 좋아요한 코디 ID 조회 (interacted_at 기준 최신순)
+    offset = (page - 1) * limit
+    favorite_interactions = db.execute(
+        select(UserCoordiInteraction.coordi_id)
+        .where(
+            UserCoordiInteraction.user_id == user_id,
+            UserCoordiInteraction.action_type == "like",
+        )
+        .order_by(UserCoordiInteraction.interacted_at.desc())
+        .offset(offset)
+        .limit(limit)
+    ).scalars().all()
+    
+    coordi_ids = list(favorite_interactions)
+    
+    # 3. 코디 상세 정보 조회 (selectinload로 N+1 방지)
+    coordis = db.execute(
+        select(Coordi)
+        .where(Coordi.coordi_id.in_(coordi_ids))
+        .options(
+            selectinload(Coordi.images),
+            selectinload(Coordi.coordi_items).selectinload(CoordiItem.item).selectinload(Item.images),
+        )
+    ).scalars().all()
+    
+    # 4. interacted_at 기준으로 정렬 (좋아요 추가 일시 기준 최신순)
+    # coordi_ids 순서대로 정렬하여 페이징된 순서 유지
+    coordi_dict = {coordi.coordi_id: coordi for coordi in coordis}
+    coordis = [coordi_dict[coordi_id] for coordi_id in coordi_ids if coordi_id in coordi_dict]
+    
+    # 5. 사용자별 isFavorited 체크 (모두 좋아요한 코디이므로 True)
+    user_favorited_coordi_ids = set(coordi_ids)
+    
+    # 6. 사용자별 isSaved 체크 (UserClosetItem 존재 여부)
+    all_item_ids = set()
+    for coordi in coordis:
+        for coordi_item in coordi.coordi_items:
+            all_item_ids.add(coordi_item.item_id)
+    
+    closet_items = db.execute(
+        select(UserClosetItem)
+        .where(
+            UserClosetItem.user_id == user_id,
+            UserClosetItem.item_id.in_(all_item_ids),
+        )
+    ).scalars().all()
+    user_closet_item_ids = {item.item_id for item in closet_items}
+    
+    # 7. 페이로드 생성
+    outfits = [
+        _build_outfit_payload_list(
+            coordi,
+            user_id,
+            user_favorited_coordi_ids,
+            user_closet_item_ids,
+        )
+        for coordi in coordis
+    ]
+    
+    # 8. 페이지네이션 정보 계산
+    total_pages = (total_items + limit - 1) // limit if total_items > 0 else 0
+    has_next = page < total_pages
+    has_prev = page > 1
+    
+    pagination = PaginationPayload(
+        currentPage=page,
+        totalPages=total_pages,
+        totalItems=total_items,
+        hasNext=has_next,
+        hasPrev=has_prev,
+    )
+    
+    return outfits, pagination
 
