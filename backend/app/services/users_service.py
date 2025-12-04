@@ -6,13 +6,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
 from datetime import datetime, timezone
 from pathlib import Path
 
 import aiofiles
 from fastapi import UploadFile
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.exceptions import (
     DeleteFailedError,
@@ -92,28 +93,35 @@ def get_preferences_options_data(
         for tag in tags
     ]
 
-    # 성별에 따라 랜덤하게 10개 코디 조회
+    # 성별에 따라 랜덤하게 10개 코디 조회 (Application-side Random Sampling)
+    # 1. 대상 ID 목록 조회
+    id_stmt = select(Coordi.coordi_id)
     if gender == "male":
-        coordis = db.execute(
-            select(Coordi)
-            .where(Coordi.gender == "male")
-            .order_by(func.random())
-            .limit(10)
-        ).scalars().all()
+        id_stmt = id_stmt.where(Coordi.gender == "male")
+        target_count = 10
     elif gender == "female":
+        id_stmt = id_stmt.where(Coordi.gender == "female")
+        target_count = 10
+    else:
+        target_count = 20
+    
+    all_ids = db.execute(id_stmt).scalars().all()
+    
+    # 2. 랜덤 샘플링
+    if len(all_ids) > target_count:
+        selected_ids = random.sample(all_ids, target_count)
+    else:
+        selected_ids = all_ids
+        
+    # 3. 실제 데이터 조회 (Eager Loading 적용)
+    if selected_ids:
         coordis = db.execute(
             select(Coordi)
-            .where(Coordi.gender == "female")
-            .order_by(func.random())
-            .limit(10)
+            .options(selectinload(Coordi.images))
+            .where(Coordi.coordi_id.in_(selected_ids))
         ).scalars().all()
     else:
-        # 성별이 없으면 모든 코디 중 랜덤하게 20개 반환
-        coordis = db.execute(
-            select(Coordi)
-            .order_by(func.random())
-            .limit(20)
-        ).scalars().all()
+        coordis = []
 
     # 예시 코디 옵션 페이로드 생성
     sample_outfits = []

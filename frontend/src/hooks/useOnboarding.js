@@ -15,10 +15,11 @@ export function useOnboarding() {
   // URL 경로를 기반으로 현재 단계 결정
   const getStepFromPath = () => {
     const path = location.pathname;
+    if (path === '/step1') return 1;
     if (path === '/step2') return 2;
     if (path === '/step3') return 3;
     if (path === '/result') return 4;
-    return 1; // 기본값 (/ 또는 /step1)
+    return 0; // 기본값 (/) -> 0단계 (소개)
   };
 
   const step = getStepFromPath();
@@ -29,15 +30,21 @@ export function useOnboarding() {
   const [currentOutfitTab, setCurrentOutfitTab] = useState(0);
 
   // 필수 데이터 누락 시 이전 단계로 리다이렉트
+  // 필수 데이터 누락 시 이전 단계로 리다이렉트
   useEffect(() => {
-    if (step > 1 && !gender) {
-      navigate('/step1', { replace: true });
+    // Step 1: Intro를 거치지 않고 접근했거나(새로고침 등), state가 없으면 Intro로 리다이렉트
+    if (step === 1 && !location.state?.fromIntro) {
+      navigate('/', { replace: true });
+    }
+    // Step 2 이상: 필수 데이터(성별)가 없으면 Intro로 리다이렉트
+    else if (step > 1 && !gender) {
+      navigate('/', { replace: true });
     } else if (step > 2 && selectedTags.length === 0) {
       navigate('/step2', { replace: true });
     } else if (step > 3 && selectedOutfits.length === 0) {
       navigate('/step3', { replace: true });
     }
-  }, [step, gender, selectedTags.length, selectedOutfits.length, navigate]);
+  }, [step, gender, selectedTags.length, selectedOutfits.length, navigate, location.state]);
 
   // 성별 선택
   const selectGender = useCallback((selected) => {
@@ -78,7 +85,8 @@ export function useOnboarding() {
 
   // 단계 이동
   const goToStep = useCallback((newStep) => {
-    if (newStep === 1) navigate('/step1');
+    if (newStep === 0) navigate('/');
+    else if (newStep === 1) navigate('/step1');
     else if (newStep === 2) navigate('/step2');
     else if (newStep === 3) navigate('/step3');
     else if (newStep === 4) navigate('/result');
@@ -86,8 +94,9 @@ export function useOnboarding() {
 
   // 이전 단계로
   const goToPreviousStep = useCallback(() => {
-    if (step > 1) {
-      if (step === 2) navigate('/step1');
+    if (step > 0) {
+      if (step === 1) navigate('/');
+      else if (step === 2) navigate('/step1');
       else if (step === 3) navigate('/step2');
       else if (step === 4) navigate('/step3');
     }
@@ -96,7 +105,8 @@ export function useOnboarding() {
   // 다음 단계로
   const goToNextStep = useCallback(() => {
     if (step < 4) {
-      if (step === 1) navigate('/step2');
+      if (step === 0) navigate('/step1', { state: { fromIntro: true } });
+      else if (step === 1) navigate('/step2');
       else if (step === 2) navigate('/step3');
       else if (step === 3) navigate('/result');
     }
@@ -119,7 +129,7 @@ export function useOnboarding() {
 
   // 리셋
   const reset = useCallback(() => {
-    navigate('/step1');
+    navigate('/');
     setGender(null);
     setSelectedTags([]);
     setSelectedOutfits([]);

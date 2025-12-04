@@ -55,10 +55,13 @@ register_exception_handlers(app)
 # API 라우터 등록
 app.include_router(api_router, prefix="/api")
 
-# 시작 시 데이터베이스 초기화
+# 시작 시 데이터베이스 초기화 및 모델 로딩
 @app.on_event("startup")
 async def startup_event():
     init_db()
+    # EmbeddingService 초기화 (모델 프리로딩)
+    from app.services.embedding_service import EmbeddingService
+    EmbeddingService()
 
 
 @app.get("/")

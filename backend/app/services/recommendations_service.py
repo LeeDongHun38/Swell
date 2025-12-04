@@ -102,12 +102,6 @@ async def _get_cold_recommended_coordi_ids_from_params(
     
     # 2. 선택한 코디들의 description_embedding 합산
     if sample_outfit_ids:
-        # 먼저 임베딩 필터 없이 조회해서 코디가 존재하는지 확인
-        all_sample_coordis = db.execute(
-            select(Coordi)
-            .where(Coordi.coordi_id.in_(sample_outfit_ids))
-        ).scalars().all()
-        
         # description_embedding이 있는 코디만 조회
         sample_coordis = db.execute(
             select(Coordi)
@@ -161,7 +155,7 @@ async def _get_cold_recommended_coordi_ids_from_params(
     
     # 기본 쿼리: 성별 필터링, 계절 필터링, description_embedding이 있는 코디만
     base_query = (
-        select(Coordi)
+        select(Coordi.coordi_id)
         .where(Coordi.gender == gender)
         .where(Coordi.season == current_season)
         .where(Coordi.description_embedding.isnot(None))
@@ -185,7 +179,7 @@ async def _get_cold_recommended_coordi_ids_from_params(
     query_vector_str = "[" + ",".join(map(str, query_embedding_list)) + "]"
     
     # text()를 사용하여 raw SQL 작성
-    coordis = db.execute(
+    coordi_ids = db.execute(
         base_query
         .order_by(
             text(f"description_embedding <=> '{query_vector_str}'::vector")
@@ -194,9 +188,7 @@ async def _get_cold_recommended_coordi_ids_from_params(
         .limit(limit)
     ).scalars().all()
     
-    # 코디 ID 리스트 반환
-    coordi_ids = [coordi.coordi_id for coordi in coordis]
-    return coordi_ids, total_items
+    return list(coordi_ids), total_items
 
 
 def _build_item_payload(

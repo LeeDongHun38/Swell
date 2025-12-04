@@ -6,6 +6,7 @@ sentence-transformers/distiluse-base-multilingual-cased-v2 모델을 사용하�
 """
 
 from typing import List
+from functools import lru_cache
 
 from sentence_transformers import SentenceTransformer
 
@@ -13,17 +14,31 @@ from sentence_transformers import SentenceTransformer
 class EmbeddingService:
     """Description embedding을 생성하는 서비스"""
     
-    def __init__(self):
+    _instance = None
+    _model = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(EmbeddingService, cls).__new__(cls)
+            cls._instance._initialize_model()
+        return cls._instance
+    
+    def _initialize_model(self):
         """
-        Embedding 모델 초기화
+        Embedding 모델 초기화 (최초 1회만 실행)
         
         모델: distiluse-base-multilingual-cased-v2
         차원: 512
         """
-        model_name = "sentence-transformers/distiluse-base-multilingual-cased-v2"
-        self.model = SentenceTransformer(model_name)
-        self.dimension = 512
+        if getattr(self, 'model', None) is None:
+            model_name = "sentence-transformers/distiluse-base-multilingual-cased-v2"
+            # 모델 로딩은 시간이 걸리므로 로그를 남길 수 있음
+            print(f"Loading SentenceTransformer model: {model_name}...")
+            self.model = SentenceTransformer(model_name)
+            self.dimension = 512
+            print("Model loaded successfully.")
     
+    @lru_cache(maxsize=1000)
     def generate_embedding(self, text: str) -> List[float]:
         """
         텍스트를 embedding 벡터로 변환
@@ -38,6 +53,10 @@ class EmbeddingService:
             return [0.0] * self.dimension
         
         try:
+            # 모델 인스턴스가 없으면 초기화 (안전장치)
+            if self.model is None:
+                self._initialize_model()
+                
             embedding = self.model.encode(
                 text,
                 normalize_embeddings=True,

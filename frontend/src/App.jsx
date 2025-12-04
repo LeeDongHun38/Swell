@@ -10,6 +10,7 @@ import { STEP_TITLES, STEP_BADGES } from './constants/onboarding';
 import { Background } from './components/Background';
 import { ProgressBar } from './components/ProgressBar';
 import { Header } from './components/Header';
+import { Step0Introduction } from './components/onboarding/Step0Introduction';
 import { Step1GenderSelection } from './components/onboarding/Step1GenderSelection';
 import { Step2TagSelection } from './components/onboarding/Step2TagSelection';
 import { Step3OutfitSelection } from './components/onboarding/Step3OutfitSelection';
@@ -103,7 +104,7 @@ function App() {
         console.error('Failed to submit preferences:', error);
         // 에러가 발생해도 추천은 계속 진행
       }
-    }, 550); // 550ms 대기 (애니메이션 시간 고려)
+    }, 500); // 500ms 대기 (애니메이션 시간 고려)
   };
 
   // 추천 좋아요 처리
@@ -129,24 +130,29 @@ function App() {
         ${onboarding.step === 4 ? 'max-w-[95vw] h-[92vh] min-h-[600px]' : 'max-w-5xl min-h-[700px]'}
       `}>
 
-        {/* 상단 진행 바 */}
-        {onboarding.step < 4 && (
+        {/* 상단 진행 바 (Step 0에서는 숨김) */}
+        {onboarding.step > 0 && onboarding.step < 4 && (
           <ProgressBar step={onboarding.step} totalSteps={3} isCompleting={isCompleting} />
         )}
 
         {/* 콘텐츠 영역 */}
         <div className="flex-1 p-6 md:p-10 flex flex-col h-full overflow-hidden">
 
-          {/* 헤더 */}
-          <Header
-            step={onboarding.step}
-            title={STEP_TITLES[onboarding.step]}
-            badge={STEP_BADGES[onboarding.step]}
-          />
+          {/* 헤더 (Step 0에서는 숨김) */}
+          {onboarding.step > 0 && (
+            <Header
+              step={onboarding.step}
+              title={STEP_TITLES[onboarding.step]}
+              badge={STEP_BADGES[onboarding.step]}
+            />
+          )}
 
           {/* 라우팅 설정 */}
           <Routes>
-            <Route path="/" element={<Navigate to="/step1" replace />} />
+            {/* STEP 0: 소개 */}
+            <Route path="/" element={
+              <Step0Introduction onNext={onboarding.goToNextStep} />
+            } />
 
             {/* STEP 1: 성별 선택 */}
             <Route path="/step1" element={

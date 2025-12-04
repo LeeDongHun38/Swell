@@ -33,7 +33,7 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/hci_fashion_db
 
 ## 🗄 데이터베이스 설정
 
-로컬 PostgreSQL 서버가 실행 중이어야 하며, `hci_fashion_db` 데이터베이스가 생성되어 있어야 합니다.
+배포된 PostgreSQL 서버가 실행 중이어야 하며, `hci_fashion_db` 데이터베이스가 생성되어 있어야 합니다.
 
 ## ▶️ 애플리케이션 실행
 
