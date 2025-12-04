@@ -43,6 +43,7 @@ node_modules
 dist/
 dist-ssr/
 *.local
+.vite/
 
 # Frontend - Logs
 npm-debug.log*
