@@ -103,7 +103,7 @@ function App() {
         console.error('Failed to submit preferences:', error);
         // 에러가 발생해도 추천은 계속 진행
       }
-    }, 600); // 600ms 대기 (애니메이션 시간 고려)
+    }, 550); // 550ms 대기 (애니메이션 시간 고려)
   };
 
   // 추천 좋아요 처리
