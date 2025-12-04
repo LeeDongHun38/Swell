@@ -308,10 +308,14 @@ def load_coordis_from_json(json_file_path: str) -> None:
         
         print(f"총 {total_count}개의 코디를 삽입합니다...\n")
         
-        # 각 코디 삽입
+        # 각 코디 삽입 (1부터 시작하는 순차적 ID 사용)
         for idx, coordi_data in enumerate(coordis_data, 1):
             try:
-                outfit_id = int(coordi_data["outfit_id"])
+                # 원본 outfit_id는 로깅용으로만 사용
+                original_outfit_id = coordi_data.get("outfit_id", "알 수 없음")
+                # 새로운 순차적 ID 사용 (1부터 시작)
+                new_outfit_id = idx
+                
                 gender = coordi_data.get("gender", "FEMALE")
                 image_url = coordi_data.get("image_url", "")
                 detail_url = coordi_data.get("detail_url", "")
@@ -320,10 +324,10 @@ def load_coordis_from_json(json_file_path: str) -> None:
                 style = coordi_data.get("style", "캐주얼")
                 description = coordi_data.get("description", "")
                 
-                # 코디 생성
+                # 코디 생성 (새로운 ID 사용)
                 coordi = create_coordi(
                     db=db,
-                    outfit_id=outfit_id,
+                    outfit_id=new_outfit_id,  # 순차적 ID 사용
                     gender=gender,
                     image_url=image_url,
                     detail_url=detail_url,
@@ -338,15 +342,16 @@ def load_coordis_from_json(json_file_path: str) -> None:
                 
                 success_count += 1
                 print(
-                    f"[{idx}/{total_count}] ✓ 코디 ID: {coordi.coordi_id}, "
+                    f"[{idx}/{total_count}] ✓ 코디 ID: {coordi.coordi_id} "
+                    f"(원본: {original_outfit_id}), "
                     f"아이템 {len(items)}개, 스타일: {coordi.style}"
                 )
                 
             except Exception as e:
                 db.rollback()
                 error_count += 1
-                outfit_id = coordi_data.get("outfit_id", "알 수 없음")
-                print(f"[{idx}/{total_count}] ✗ 코디 ID {outfit_id}: {str(e)}")
+                original_outfit_id = coordi_data.get("outfit_id", "알 수 없음")
+                print(f"[{idx}/{total_count}] ✗ 코디 ID {original_outfit_id}: {str(e)}")
                 print("상세 에러 로그:")
                 traceback.print_exc()
                 print("-" * 50)

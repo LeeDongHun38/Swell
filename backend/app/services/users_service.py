@@ -11,7 +11,7 @@ from pathlib import Path
 
 import aiofiles
 from fastapi import UploadFile
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import (
@@ -92,54 +92,27 @@ def get_preferences_options_data(
         for tag in tags
     ]
 
-    # TODO: 하드코딩한 값이니, 변경이 생길 경우 반드시 교체
-    # 성별에 따른 예시 코디 ID 필터링
-    # 남자 코디 10개
-    male_coordi_ids = [
-        1438047372096127182,
-        1438050658717615145,
-        1440632826790372313,
-        1432261617683781306,
-        1441363312562352773,
-        1437685886030622206,
-        1438129953480057346,
-        1434470090269916402,
-        1434889077588442216,
-        1434903191551269505,
-    ]
-    # 여자 코디 10개
-    female_coordi_ids = [
-        1440978364617105571,
-        1438118635197050864,
-        1442495043165125647,
-        1440256083999133220,
-        1438892987386383965,
-        1438907255408718529,
-        1438476711227292678,
-        1438487289000337970,
-        1438477585693402900,
-        1440686744765890806,
-    ]
-    
-    # 성별에 따라 코디 ID 선택
+    # 성별에 따라 랜덤하게 10개 코디 조회
     if gender == "male":
-        allowed_coordi_ids = male_coordi_ids
-    elif gender == "female":
-        allowed_coordi_ids = female_coordi_ids
-    else:
-        # 성별이 없으면 모든 코디 반환 (기존 동작 유지)
-        allowed_coordi_ids = None
-    
-    # 예시 코디 조회 (성별에 따라 필터링, ID 순으로 정렬)
-    if allowed_coordi_ids is not None:
         coordis = db.execute(
             select(Coordi)
-            .where(Coordi.coordi_id.in_(allowed_coordi_ids))
-            .order_by(Coordi.coordi_id)
+            .where(Coordi.gender == "male")
+            .order_by(func.random())
+            .limit(10)
+        ).scalars().all()
+    elif gender == "female":
+        coordis = db.execute(
+            select(Coordi)
+            .where(Coordi.gender == "female")
+            .order_by(func.random())
+            .limit(10)
         ).scalars().all()
     else:
+        # 성별이 없으면 모든 코디 중 랜덤하게 20개 반환
         coordis = db.execute(
-            select(Coordi).order_by(Coordi.coordi_id).limit(20)
+            select(Coordi)
+            .order_by(func.random())
+            .limit(20)
         ).scalars().all()
 
     # 예시 코디 옵션 페이로드 생성
@@ -164,21 +137,25 @@ def get_preferences_options_data(
     return hashtags, sample_outfits
 
 
-def set_user_preferences(
+def validate_preferences(
     db: Session,
-    user_id: int,
     payload: UserPreferencesRequest,
-) -> User:
+) -> None:
     """
-    사용자 선호도를 설정한다.
+    선호도 설정 요청 페이로드를 검증한다.
     
     Args:
         db: 데이터베이스 세션
-        user_id: 사용자 ID
         payload: 선호도 설정 요청 페이로드
         
-    Returns:
-        업데이트된 사용자 객체
+    Raises:
+        InsufficientHashtagsError: 해시태그가 3개 미만인 경우
+        TooManyHashtagsError: 해시태그가 10개 초과인 경우
+        InsufficientOutfitsError: 코디가 5개 미만인 경우
+        TooManyOutfitsError: 코디가 5개 초과인 경우
+        DuplicateIdError: 중복 ID가 있는 경우
+        InvalidHashtagIdError: 유효하지 않은 해시태그 ID가 있는 경우
+        InvalidOutfitIdError: 유효하지 않은 코디 ID가 있는 경우
     """
     # 해시태그 개수 검증 (3-10개)
     hashtag_count = len(payload.hashtag_ids)
@@ -219,6 +196,26 @@ def set_user_preferences(
     )
     if len(valid_coordi_ids) != outfit_count:
         raise InvalidOutfitIdError()
+
+
+def set_user_preferences(
+    db: Session,
+    user_id: int,
+    payload: UserPreferencesRequest,
+) -> User:
+    """
+    사용자 선호도를 설정한다.
+    
+    Args:
+        db: 데이터베이스 세션
+        user_id: 사용자 ID
+        payload: 선호도 설정 요청 페이로드
+        
+    Returns:
+        업데이트된 사용자 객체
+    """
+    # 검증 수행
+    validate_preferences(db, payload)
 
     # 사용자 조회
     user = db.get(User, user_id)

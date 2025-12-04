@@ -5,12 +5,15 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 import numpy as np
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session, selectinload
+
+logger = logging.getLogger(__name__)
 
 from app.models.coordi import Coordi
 from app.models.coordi_item import CoordiItem
@@ -53,24 +56,29 @@ def _get_season_from_month(month: int) -> str:
         return "summer"
     return "fall"
 
-
-async def _get_recommended_coordi_ids_temporary(
+async def _get_cold_recommended_coordi_ids_from_params(
     db: Session,
-    user_id: int,
+    gender: str,
+    hashtag_ids: List[int],
+    sample_outfit_ids: List[int],
     page: int,
     limit: int,
 ) -> tuple[list[int], int]:
     """
-    임시 추천 함수: 사용자 성별에 맞는 코디를 최신순으로 반환합니다.
+    Cold recommendation 함수 (쿼리 파라미터 기반): 온보딩 데이터를 직접 받아서 임베딩 기반 추천을 수행합니다.
     
-    TODO: 추천 모델로 교체 예정, 진짜 엄청 개편필요함 ㅠㅠ
+    Cold-Start 테스트용 함수입니다.
     
     Parameters
     ----------
     db:
         데이터베이스 세션
-    user_id:
-        사용자 ID
+    gender:
+        성별 ("male" 또는 "female")
+    hashtag_ids:
+        선호 태그 ID 배열
+    sample_outfit_ids:
+        선호 코디 ID 배열
     page:
         페이지 번호 (1부터 시작)
     limit:
@@ -81,113 +89,29 @@ async def _get_recommended_coordi_ids_temporary(
     tuple[list[int], int]:
         (코디 ID 리스트, 전체 코디 개수)
     """
-    # 사용자 정보 조회
-    user = db.get(User, user_id)
-    if user is None or user.gender is None: # 사용자 정보 조회 실패 시 빈 리스트 반환
-        return [], 0
     
-    # 사용자가 이미 본 코디 또는 상호작용한 코디 ID 조회 (제외할 코디)
-    viewed_coordi_ids = db.execute(
-        select(UserCoordiViewLog.coordi_id)
-        .where(UserCoordiViewLog.user_id == user_id)
-    ).scalars().all()
+    # 1. 태그 ID로 태그 이름 조회
+    hashtags_text = ""
+    if hashtag_ids:
+        tags = db.execute(
+            select(Tag)
+            .where(Tag.tag_id.in_(hashtag_ids))
+        ).scalars().all()
+        # 태그 텍스트 합치기 (예: "캐주얼 스트릿 미니멀")
+        hashtags_text = " ".join([tag.name for tag in tags])
     
-    interacted_coordi_ids = db.execute(
-        select(UserCoordiInteraction.coordi_id)
-        .where(UserCoordiInteraction.user_id == user_id)
-    ).scalars().all()
-    
-    # 두 집합 합치기 (중복 제거)
-    # TODO: 이렇게 사후적 조치를 하는 것보단, 애초에 dataset에서 제외되도록 추천 모델 개발 필요
-    excluded_coordi_ids = set(viewed_coordi_ids) | set(interacted_coordi_ids)
-    
-    # 사용자 성별에 맞는 코디 조회 (최신순, 이미 본 코디 제외)
-    # TODO: 추천 모델로 교체 예정
-    offset = (page - 1) * limit
-    
-    # 기본 쿼리: 성별 필터링
-    base_query = select(Coordi).where(Coordi.gender == user.gender)
-    
-    # 이미 본 코디가 있으면 제외
-    if excluded_coordi_ids:
-        base_query = base_query.where(Coordi.coordi_id.notin_(excluded_coordi_ids))
-    
-    # 페이지네이션용 전체 개수 조회 (최적화: count() 사용)
-    count_query = select(func.count(Coordi.coordi_id)).where(Coordi.gender == user.gender)
-    if excluded_coordi_ids:
-        count_query = count_query.where(Coordi.coordi_id.notin_(excluded_coordi_ids))
-    total_items = db.execute(count_query).scalar_one()
-    
-    # 페이지네이션 적용
-    # TODO: 여기에 추천 모델 적용
-    coordis = db.execute(
-        base_query
-        .order_by(Coordi.created_at.desc())
-        .offset(offset)
-        .limit(limit) 
-    ).scalars().all()
-    
-    # 코디 ID 리스트 반환
-    coordi_ids = [coordi.coordi_id for coordi in coordis]
-    return coordi_ids, total_items
-
-
-async def _get_cold_recommended_coordi_ids(
-    db: Session,
-    user_id: int,
-    page: int,
-    limit: int,
-) -> tuple[list[int], int]:
-    """
-    Cold recommendation 함수: 사용자의 선호 태그와 선택한 샘플 코디를 기반으로 임베딩 기반 추천을 수행합니다.
-    
-    Parameters
-    ----------
-    db:
-        데이터베이스 세션
-    user_id:
-        사용자 ID
-    page:
-        페이지 번호 (1부터 시작)
-    limit:
-        페이지당 개수(반환할 코디의 개수)
+    # 2. 선택한 코디들의 description_embedding 합산
+    if sample_outfit_ids:
+        # 먼저 임베딩 필터 없이 조회해서 코디가 존재하는지 확인
+        all_sample_coordis = db.execute(
+            select(Coordi)
+            .where(Coordi.coordi_id.in_(sample_outfit_ids))
+        ).scalars().all()
         
-    Returns
-    -------
-    tuple[list[int], int]:
-        (코디 ID 리스트, 전체 코디 개수)
-    """
-    # 사용자 정보 조회
-    user = db.get(User, user_id)
-    if user is None or user.gender is None:
-        return [], 0
-    
-    # 1. 사용자의 선호 태그 조회
-    preferred_tags = db.execute(
-        select(Tag)
-        .join(UserPreferredTag, Tag.tag_id == UserPreferredTag.tag_id)
-        .where(UserPreferredTag.user_id == user_id)
-    ).scalars().all()
-    
-    # 태그 텍스트 합치기 (예: "#캐주얼 #스트릿 #미니멀")
-    hashtags_text = " ".join([tag.name for tag in preferred_tags])
-    
-    # 2. 사용자가 선택한 샘플 코디 조회 (action_type='preference')
-    preference_interactions = db.execute(
-        select(UserCoordiInteraction)
-        .where(
-            UserCoordiInteraction.user_id == user_id,
-            UserCoordiInteraction.action_type == "preference",
-        )
-    ).scalars().all()
-    
-    sample_coordi_ids = [interaction.coordi_id for interaction in preference_interactions]
-    
-    # 3. 선택한 코디들의 description_embedding 합산
-    if sample_coordi_ids:
+        # description_embedding이 있는 코디만 조회
         sample_coordis = db.execute(
             select(Coordi)
-            .where(Coordi.coordi_id.in_(sample_coordi_ids))
+            .where(Coordi.coordi_id.in_(sample_outfit_ids))
             .where(Coordi.description_embedding.isnot(None))
         ).scalars().all()
         
@@ -208,67 +132,48 @@ async def _get_cold_recommended_coordi_ids(
         # 선택한 코디가 없으면 0 벡터
         image_embedding_sum = np.zeros(512)
     
-    # 4. 태그 임베딩 생성
+    # 3. 태그 임베딩 생성
     embedding_service = EmbeddingService()
     if hashtags_text:
         hashtags_embedding = np.array(embedding_service.generate_embedding(hashtags_text), dtype=float)
     else:
         hashtags_embedding = np.zeros(512)
     
-    # 5. 쿼리 임베딩 생성 (cold_start.py 로직 참고: text_weight=10.0)
+    # 4. 쿼리 임베딩 생성
     text_weight = 10.0
-    query_embedding = hashtags_embedding * text_weight + image_embedding_sum
+    query_embedding = hashtags_embedding + image_embedding_sum * text_weight
     
     # 정규화 (코사인 유사도 계산 시 필요)
     norm = np.linalg.norm(query_embedding)
     if norm > 0:
         query_embedding = query_embedding / norm
     else:
-        # 정규화 불가능하면 기본 추천으로 fallback
-        return await _get_recommended_coordi_ids_temporary(db, user_id, page, limit)
+        # 정규화 불가능하면 빈 결과 반환
+        return [], 0
     
-    # 6. 사용자가 이미 본 코디 또는 상호작용한 코디 ID 조회 (제외할 코디)
-    viewed_coordi_ids = db.execute(
-        select(UserCoordiViewLog.coordi_id)
-        .where(UserCoordiViewLog.user_id == user_id)
-    ).scalars().all()
-    
-    interacted_coordi_ids = db.execute(
-        select(UserCoordiInteraction.coordi_id)
-        .where(UserCoordiInteraction.user_id == user_id)
-    ).scalars().all()
-    
-    excluded_coordi_ids = set(viewed_coordi_ids) | set(interacted_coordi_ids)
-    
-    # 7. 현재 날짜 기준 계절 필터 적용
+    # 5. 현재 날짜 기준 계절 필터 적용
     current_month = datetime.now().month
     current_season = _get_season_from_month(current_month)
     
-    # 8. pgvector를 사용하여 코사인 유사도로 유사한 코디 찾기
+    # 6. pgvector를 사용하여 코사인 유사도로 유사한 코디 찾기
     # <=> 연산자는 코사인 거리 (1 - 코사인 유사도)를 반환하므로, 작을수록 유사함
     offset = (page - 1) * limit
     
     # 기본 쿼리: 성별 필터링, 계절 필터링, description_embedding이 있는 코디만
     base_query = (
         select(Coordi)
-        .where(Coordi.gender == user.gender)
+        .where(Coordi.gender == gender)
         .where(Coordi.season == current_season)
         .where(Coordi.description_embedding.isnot(None))
     )
-    
-    # 이미 본 코디가 있으면 제외
-    if excluded_coordi_ids:
-        base_query = base_query.where(Coordi.coordi_id.notin_(excluded_coordi_ids))
     
     # 전체 개수 조회
     count_query = (
         select(func.count(Coordi.coordi_id))
-        .where(Coordi.gender == user.gender)
+        .where(Coordi.gender == gender)
         .where(Coordi.season == current_season)
         .where(Coordi.description_embedding.isnot(None))
     )
-    if excluded_coordi_ids:
-        count_query = count_query.where(Coordi.coordi_id.notin_(excluded_coordi_ids))
     total_items = db.execute(count_query).scalar_one()
     
     # 쿼리 임베딩을 리스트로 변환
@@ -280,7 +185,6 @@ async def _get_cold_recommended_coordi_ids(
     query_vector_str = "[" + ",".join(map(str, query_embedding_list)) + "]"
     
     # text()를 사용하여 raw SQL 작성
-    # db.execute()에 params로 파라미터 전달
     coordis = db.execute(
         base_query
         .order_by(
@@ -289,6 +193,7 @@ async def _get_cold_recommended_coordi_ids(
         .offset(offset)
         .limit(limit)
     ).scalars().all()
+    
     # 코디 ID 리스트 반환
     coordi_ids = [coordi.coordi_id for coordi in coordis]
     return coordi_ids, total_items
@@ -296,7 +201,7 @@ async def _get_cold_recommended_coordi_ids(
 
 def _build_item_payload(
     item: Item,
-    user_id: int,
+    user_id: Optional[int],
     user_closet_item_ids: set[int],
 ) -> OutfitItemPayload:
     """
@@ -343,7 +248,7 @@ def _build_item_payload(
 
 def _build_outfit_payload(
     coordi: Coordi,
-    user_id: int,
+    user_id: Optional[int],
     user_favorited_coordi_ids: set[int],
     user_closet_item_ids: set[int],
     llm_message: Optional[str],
@@ -402,9 +307,12 @@ def _build_outfit_payload(
 
 async def get_recommended_coordis(
     db: Session,
-    user_id: int,
+    user_id: Optional[int] = None,
     page: int = 1,
     limit: int = 20,
+    onboarding_gender: Optional[str] = None,
+    onboarding_hashtag_ids: Optional[List[int]] = None,
+    onboarding_sample_outfit_ids: Optional[List[int]] = None,
 ) -> tuple[list[OutfitPayload], PaginationPayload]:
     """
     사용자 맞춤 코디 목록을 조회합니다.
@@ -414,33 +322,36 @@ async def get_recommended_coordis(
     db:
         데이터베이스 세션
     user_id:
-        사용자 ID
+        사용자 ID (Optional - Cold-Start 테스트 시 None)
     page:
         페이지 번호 (1부터 시작)
     limit:
         페이지당 개수
+    onboarding_gender:
+        온보딩 성별 (Cold-Start 테스트용)
+    onboarding_hashtag_ids:
+        온보딩 태그 ID 배열 (Cold-Start 테스트용)
+    onboarding_sample_outfit_ids:
+        온보딩 샘플 코디 ID 배열 (Cold-Start 테스트용)
         
     Returns
     -------
     tuple[list[OutfitPayload], PaginationPayload]:
         (코디 페이로드 리스트, 페이지네이션 정보)
     """
-    # 1. 사용자 정보 조회
-    user = db.get(User, user_id)
-    if user is None:
-        raise ValueError(f"User with id {user_id} not found")
-    
-    # 2. 온보딩 상태에 따라 추천 방식 결정
-    if user.has_completed_onboarding:
-        # 온보딩 완료: Cold recommendation (임베딩 기반)
-        coordi_ids, total_items = await _get_cold_recommended_coordi_ids(
-            db, user_id, page, limit
+    # Cold-Start 테스트: 쿼리 파라미터로 온보딩 데이터가 전달된 경우
+    if onboarding_gender and (onboarding_hashtag_ids or onboarding_sample_outfit_ids):
+        coordi_ids, total_items = await _get_cold_recommended_coordi_ids_from_params(
+            db=db,
+            gender=onboarding_gender,
+            hashtag_ids=onboarding_hashtag_ids or [],
+            sample_outfit_ids=onboarding_sample_outfit_ids or [],
+            page=page,
+            limit=limit,
         )
     else:
-        # 온보딩 미완료: 임시 추천 (기존 로직)
-        coordi_ids, total_items = await _get_recommended_coordi_ids_temporary(
-            db, user_id, page, limit
-        )
+        # 인증도 없고 온보딩 데이터도 없으면 에러
+        raise ValueError("Either user_id or onboarding data must be provided")
     
     # 코디 ID 리스트가 비어있으면 빈 결과 반환
     if not coordi_ids:
@@ -468,32 +379,36 @@ async def get_recommended_coordis(
     coordis = [coordi_dict[cid] for cid in coordi_ids if cid in coordi_dict]
     
     # 4. 사용자별 isFavorited 체크
-    # 사용자가 해당 코디를 좋아요 했는지
-    favorited_interactions = db.execute(
-        select(UserCoordiInteraction)
-        .where(
-            UserCoordiInteraction.user_id == user_id,
-            UserCoordiInteraction.coordi_id.in_(coordi_ids),
-            UserCoordiInteraction.action_type == "like",
-        )
-    ).scalars().all()
-    user_favorited_coordi_ids = {interaction.coordi_id for interaction in favorited_interactions}
+    # 사용자가 해당 코디를 좋아요 했는지 (user_id가 있을 때만)
+    user_favorited_coordi_ids = set()
+    if user_id is not None:
+        favorited_interactions = db.execute(
+            select(UserCoordiInteraction)
+            .where(
+                UserCoordiInteraction.user_id == user_id,
+                UserCoordiInteraction.coordi_id.in_(coordi_ids),
+                UserCoordiInteraction.action_type == "like",
+            )
+        ).scalars().all()
+        user_favorited_coordi_ids = {interaction.coordi_id for interaction in favorited_interactions}
     
     # 5. 사용자별 isSaved 체크 (UserClosetItem 존재 여부)
-    # 사용자가 각 아이템들을 좋아요 했는지
-    all_item_ids = set()
-    for coordi in coordis:
-        for coordi_item in coordi.coordi_items:
-            all_item_ids.add(coordi_item.item_id)
-    
-    closet_items = db.execute(
-        select(UserClosetItem)
-        .where(
-            UserClosetItem.user_id == user_id,
-            UserClosetItem.item_id.in_(all_item_ids),
-        )
-    ).scalars().all()
-    user_closet_item_ids = {item.item_id for item in closet_items}
+    # 사용자가 각 아이템들을 좋아요 했는지 (user_id가 있을 때만)
+    user_closet_item_ids = set()
+    if user_id is not None:
+        all_item_ids = set()
+        for coordi in coordis:
+            for coordi_item in coordi.coordi_items:
+                all_item_ids.add(coordi_item.item_id)
+        
+        closet_items = db.execute(
+            select(UserClosetItem)
+            .where(
+                UserClosetItem.user_id == user_id,
+                UserClosetItem.item_id.in_(all_item_ids),
+            )
+        ).scalars().all()
+        user_closet_item_ids = {item.item_id for item in closet_items}
     
     # 6. 코디별 LLM 메시지 생성 (병렬, Semaphore로 동시 요청 제한)
     # TODO: 임시로 패스 - LLM 메시지 생성 비활성화
