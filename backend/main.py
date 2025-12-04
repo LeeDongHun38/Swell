@@ -58,11 +58,7 @@ app.include_router(api_router, prefix="/api")
 # 시작 시 데이터베이스 초기화
 @app.on_event("startup")
 async def startup_event():
-    try:
-        init_db()
-    except Exception as e:
-        logging.error(f"Database initialization failed: {e}")
-        # DB 연결 실패하더라도 서버는 뜨게 함 (Cloud Run 배포 디버깅용)
+    init_db()
 
 
 @app.get("/")
