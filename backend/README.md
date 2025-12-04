@@ -5,7 +5,7 @@ FastAPI 기반 추천 시스템 백엔드.
 ## 📋 사전 요구사항
 - **Python 3.11(필수!)**
 - **pip** / **venv**
-- **Docker & Docker Compose** (PostgreSQL 컨테이너용)
+- **PostgreSQL** (로컬 설치 필요)
 
 ## 🚀 로컬 개발 환경 설정
 
@@ -31,14 +31,9 @@ cp .env.example .env          # 파일이 없다면 직접 생성
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/hci_fashion_db
 ```
 
-## 🗄 PostgreSQL 컨테이너 실행(로컬 개발시)
+## 🗄 데이터베이스 설정
 
-```bash
-docker-compose up -d          # DB만 실행
-
-# 종료 시
-docker-compose down
-```
+로컬 PostgreSQL 서버가 실행 중이어야 하며, `hci_fashion_db` 데이터베이스가 생성되어 있어야 합니다.
 
 ## ▶️ 애플리케이션 실행
 
@@ -110,5 +105,4 @@ backend/
 │   └── fitting/         # 가상 피팅 결과 이미지
 ├── main.py              # FastAPI 진입점
 ├── requirements.txt     # 의존성 목록
-└── docker-compose.yml   # PostgreSQL 컨테이너 설정
 ```

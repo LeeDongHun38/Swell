@@ -1,9 +1,14 @@
+# Git
+.git
+.gitignore
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+env/
 build/
 develop-eggs/
 dist/
@@ -21,46 +26,37 @@ wheels/
 *.egg
 
 # Virtual Environment
-venv/
-env/
-ENV/
 .venv
+venv/
+ENV/
+
+# Environment Variables
+.env
+.env.*
 
 # IDE
-.vscode/
 .idea/
+.vscode/
 *.swp
 *.swo
-*~
-
-# Environment variables
-.env
-.env.local
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Docker
-*.log
-docker-compose.yml
-Dockerfile
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Testing
-.pytest_cache/
+# Logs
+*.log
+logs/
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Test / Coverage
 .coverage
 htmlcov/
+.pytest_cache/
 
-# Git
-.git/
-.gitignore
-
-# README
-README.md
-TROUBLESHOOTING.md
-
+# Uploads (if local storage)
+uploads/
