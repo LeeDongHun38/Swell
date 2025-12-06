@@ -120,7 +120,7 @@ export function RecommendationView({
 
           <div className="mt-4 flex flex-col items-center text-center shrink-0">
             <div className="flex items-center gap-2 text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">
-              {formatTags(recommendation.descriptionTags || recommendation.tags || [])}
+              {formatTags((recommendation.descriptionTags || recommendation.tags || []).slice(0, 4))}
             </div>
             <h3 className="text-2xl font-bold text-slate-900 mb-3 break-keep">
               {recommendation.descriptionText || recommendation.title || recommendation.style || '스타일 추천'}

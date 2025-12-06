@@ -160,6 +160,10 @@ async def _get_cold_recommended_coordi_ids_from_params(
         .where(Coordi.season == current_season)
         .where(Coordi.description_embedding.isnot(None))
     )
+
+    # 선호도로 선택한 코디는 추천 결과에서 제외
+    if sample_outfit_ids:
+        base_query = base_query.where(Coordi.coordi_id.notin_(sample_outfit_ids))
     
     # 전체 개수 조회
     count_query = (
@@ -168,6 +172,11 @@ async def _get_cold_recommended_coordi_ids_from_params(
         .where(Coordi.season == current_season)
         .where(Coordi.description_embedding.isnot(None))
     )
+
+    # 선호도로 선택한 코디는 전체 개수에서도 제외
+    if sample_outfit_ids:
+        count_query = count_query.where(Coordi.coordi_id.notin_(sample_outfit_ids))
+
     total_items = db.execute(count_query).scalar_one()
     
     # 쿼리 임베딩을 리스트로 변환
