@@ -17,6 +17,44 @@ export function RecommendationView({
 }) {
   if (!recommendation) return null;
 
+  // Touch & Gesture Logic
+  const [touchStart, setTouchStart] = React.useState(null);
+  const [touchEnd, setTouchEnd] = React.useState(null);
+  const [lastTap, setLastTap] = React.useState(0);
+
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      onChangeRecommendation('next');
+    }
+    if (isRightSwipe) {
+      onChangeRecommendation('prev');
+    }
+  };
+
+  const handleDoubleTap = (e) => {
+    const currentTime = new Date().getTime();
+    const tapLength = currentTime - lastTap;
+    if (tapLength < 300 && tapLength > 0) {
+      e.preventDefault();
+      onLike();
+    }
+    setLastTap(currentTime);
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       {/* 상단 네비게이션바 */}
@@ -32,34 +70,42 @@ export function RecommendationView({
         </div>
       </div>
 
-      <div className={`flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 h-full min-h-0 pb-6 fade-transition ${isTransitioning ? 'hidden-state' : ''}`}>
+      <div className={`flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 h-full min-h-0 pb-6 fade-transition overflow-y-auto lg:overflow-hidden ${isTransitioning ? 'hidden-state' : ''}`}>
 
         {/* 왼쪽 컬럼: 코디 이미지 */}
-        <div className="lg:col-span-7 flex flex-col h-full min-h-0 relative group">
-          <div className="relative flex-1 bg-gray-200 rounded-3xl overflow-hidden shadow-sm border border-slate-100 min-h-0 group">
+        <div className="lg:col-span-7 flex flex-col lg:h-full lg:min-h-0 relative group shrink-0">
+          <div className="relative w-full h-[50vh] min-h-[360px] lg:h-auto lg:flex-1 bg-gray-200 rounded-3xl overflow-hidden shadow-sm border border-slate-100 min-h-0 group">
 
             <div
               className="absolute inset-0 bg-cover bg-center blur-2xl opacity-60 scale-110 transition-all duration-700"
               style={{ backgroundImage: `url(${recommendation.imageUrl || recommendation.image})` }}
             />
 
-            <img
-              key={currentIndex}
-              src={recommendation.imageUrl || recommendation.image}
-              alt={recommendation.title || "Outfit Recommendation"}
-              className="absolute inset-0 z-10 w-full h-full object-contain"
-            />
+            <div
+              className="absolute inset-0 z-10 w-full h-full"
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+              onClick={handleDoubleTap}
+            >
+              <img
+                key={currentIndex}
+                src={recommendation.imageUrl || recommendation.image}
+                alt={recommendation.title || "Outfit Recommendation"}
+                className="w-full h-full object-contain"
+              />
+            </div>
 
             {/* 네비게이션 버튼 */}
             <button
-              onClick={() => onChangeRecommendation('prev')}
-              className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-white/80 hover:bg-white text-slate-900 rounded-full shadow-lg backdrop-blur-sm transition-all hover:scale-110 opacity-0 group-hover:opacity-100 z-20"
+              onClick={(e) => { e.stopPropagation(); onChangeRecommendation('prev'); }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-white/80 hover:bg-white text-slate-900 rounded-full shadow-lg backdrop-blur-sm transition-all hover:scale-110 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 z-20"
             >
               <ChevronLeft size={24} />
             </button>
             <button
-              onClick={() => onChangeRecommendation('next')}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white/80 hover:bg-white text-slate-900 rounded-full shadow-lg backdrop-blur-sm transition-all hover:scale-110 opacity-0 group-hover:opacity-100 z-20"
+              onClick={(e) => { e.stopPropagation(); onChangeRecommendation('next'); }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white/80 hover:bg-white text-slate-900 rounded-full shadow-lg backdrop-blur-sm transition-all hover:scale-110 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 z-20"
             >
               <ChevronRight size={24} />
             </button>
@@ -97,7 +143,7 @@ export function RecommendationView({
         </div>
 
         {/* 오른쪽 컬럼: 아이템 리스트 */}
-        <div className="lg:col-span-5 flex flex-col h-full min-h-0 pl-0 lg:pl-4">
+        <div className="lg:col-span-5 flex flex-col lg:h-full lg:min-h-0 pl-0 lg:pl-4">
           <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2 shrink-0">
             착용 아이템
             <span className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full">
@@ -105,7 +151,7 @@ export function RecommendationView({
             </span>
           </h3>
 
-          <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar min-h-0">
+          <div className="lg:flex-1 lg:overflow-y-auto pr-2 space-y-3 custom-scrollbar min-h-0">
             {recommendation.items?.map((item, idx) => (
               <div
                 key={item.id || idx}

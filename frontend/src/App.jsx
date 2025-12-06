@@ -126,9 +126,14 @@ function App() {
 
       {/* 메인 컨테이너 */}
       <div className={`
-        relative z-10 w-full mx-4 my-8 flex flex-col bg-white/70 backdrop-blur-xl rounded-[32px] shadow-2xl shadow-slate-900/10 border border-white/60 overflow-hidden transition-all duration-700 ease-in-out
-        ${onboarding.step === 4 ? 'max-w-[95vw] h-[92vh] min-h-[600px]' :
-          onboarding.step === 0 ? 'max-w-6xl min-h-[800px]' : 'max-w-5xl min-h-[700px]'}
+        relative z-10 flex flex-col bg-white/70 backdrop-blur-xl overflow-hidden transition-all duration-700 ease-in-out
+        w-full min-h-screen md:w-full md:min-h-0
+        md:mx-4 md:my-8 md:rounded-[32px] md:shadow-2xl md:shadow-slate-900/10 md:border md:border-white/60
+        ${onboarding.step === 4
+          ? 'md:max-w-[95vw] md:h-[92vh] md:min-h-[600px]'
+          : onboarding.step === 0
+            ? 'md:max-w-6xl md:min-h-[800px]'
+            : 'md:max-w-5xl md:min-h-[700px]'}
       `}>
 
         {/* 상단 진행 바 (Step 0에서는 숨김) */}
@@ -137,7 +142,7 @@ function App() {
         )}
 
         {/* 콘텐츠 영역 */}
-        <div className="flex-1 p-6 md:p-10 flex flex-col h-full overflow-hidden">
+        <div className="flex-1 p-4 md:p-10 flex flex-col h-full overflow-hidden">
 
           {/* 헤더 (Step 0에서는 숨김) */}
           {onboarding.step > 0 && (

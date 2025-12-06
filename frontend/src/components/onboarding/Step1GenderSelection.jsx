@@ -20,7 +20,10 @@ export function Step1GenderSelection({ gender, onSelect }) {
         {GENDERS.map((g, idx) => (
           <button
             key={g}
-            onClick={() => onSelect(g)}
+            onClick={() => {
+              if (navigator?.vibrate) navigator.vibrate(10);
+              onSelect(g);
+            }}
             style={{ animationDelay: `${200 + idx * 100}ms` }}
             className={`
               stagger-item relative aspect-square rounded-3xl text-xl font-bold transition-all duration-300

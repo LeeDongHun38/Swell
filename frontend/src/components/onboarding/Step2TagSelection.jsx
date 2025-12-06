@@ -13,7 +13,7 @@ export function Step2TagSelection({
   validation
 }) {
   return (
-    <div className="flex-1 flex flex-col animate-enter">
+    <div className="flex-1 flex flex-col animate-enter h-full overflow-hidden">
       <div className="mb-8 stagger-item" style={{ animationDelay: '100ms' }}>
         <h2 className="text-2xl font-bold text-slate-800 mb-2">
           당신의 스타일을 알려주세요
@@ -23,33 +23,38 @@ export function Step2TagSelection({
         </p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-12">
-        {tags.map((tag, index) => {
-          const isSelected = selectedTagIds.includes(tag.id);
-          return (
-            <button
-              key={tag.id}
-              onClick={() => onToggleTag(tag.id)}
-              style={{ animationDelay: `${150 + index * 30}ms` }}
-              className={`
+      <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0 -mr-2 pr-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-4 pb-20 md:pb-0">
+          {tags.map((tag, index) => {
+            const isSelected = selectedTagIds.includes(tag.id);
+            return (
+              <button
+                key={tag.id}
+                onClick={() => {
+                  if (navigator?.vibrate) navigator.vibrate(5);
+                  onToggleTag(tag.id);
+                }}
+                style={{ animationDelay: `${150 + index * 30}ms` }}
+                className={`
                 stagger-item relative px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 ease-out
                 border group overflow-hidden break-keep
                 ${isSelected
-                  ? 'bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-900/20 scale-[1.02]'
-                  : 'bg-white border-slate-200 text-slate-600 hover:border-slate-400 hover:bg-slate-50'}
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-900/20 scale-[1.02]'
+                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-400 hover:bg-slate-50'}
               `}
-            >
-              <span className="relative z-10 flex items-center justify-center gap-2">
-                {isSelected && <Check size={14} className="stroke-[3]" />}
-                {tag.name}
-              </span>
-            </button>
-          );
-        })}
+              >
+                <span className="relative z-10 flex items-center justify-center gap-2">
+                  {isSelected && <Check size={14} className="stroke-[3]" />}
+                  {tag.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div
-        className="mt-auto pt-6 border-t border-slate-200/60 flex flex-col sm:flex-row justify-between items-center gap-4 stagger-item"
+        className="shrink-0 mt-auto pt-4 md:pt-6 border-t border-slate-200/60 flex flex-col sm:flex-row justify-between items-center gap-4 stagger-item bg-white/90 md:bg-transparent backdrop-blur-md md:backdrop-blur-none -mx-4 px-4 md:-mx-0 md:px-0 pb-4 md:pb-0"
         style={{ animationDelay: '600ms' }}
       >
         <div className="flex items-center gap-4">

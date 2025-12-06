@@ -22,7 +22,7 @@ export function Step0Introduction({ onNext }) {
                 </div>
 
                 {/* Guide Section */}
-                <div className="w-full bg-white/50 backdrop-blur-sm rounded-3xl p-8 border border-slate-100 shadow-sm stagger-item" style={{ animationDelay: '200ms' }}>
+                <div className="w-full bg-white/50 backdrop-blur-sm rounded-3xl p-5 md:p-8 border border-slate-100 shadow-sm stagger-item" style={{ animationDelay: '200ms' }}>
                     <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center justify-center gap-2">
                         <CheckCircle className="w-5 h-5 text-cyan-500" />
                         <span>테스트 진행 가이드</span>

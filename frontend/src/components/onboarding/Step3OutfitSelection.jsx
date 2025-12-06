@@ -22,7 +22,7 @@ export function Step3OutfitSelection({
   );
 
   return (
-    <div className="flex-1 flex flex-col animate-enter">
+    <div className="flex-1 flex flex-col animate-enter h-full overflow-hidden">
       <div className="mb-6 stagger-item" style={{ animationDelay: '100ms' }}>
         <div>
           <h2 className="text-2xl font-bold text-slate-800 mb-2">
@@ -37,38 +37,43 @@ export function Step3OutfitSelection({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 mb-12">
-        {currentTabOutfits.map((outfit, index) => {
-          const isSelected = selectedOutfits.includes(outfit.id);
-          return (
-            <div
-              key={outfit.id}
-              onClick={() => onToggleOutfit(outfit.id)}
-              style={{ animationDelay: `${200 + index * 50}ms` }}
-              className={`
+      <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0 -mr-2 pr-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 mb-4 pb-20 md:pb-0">
+          {currentTabOutfits.map((outfit, index) => {
+            const isSelected = selectedOutfits.includes(outfit.id);
+            return (
+              <div
+                key={outfit.id}
+                onClick={() => {
+                  if (navigator?.vibrate) navigator.vibrate(10);
+                  onToggleOutfit(outfit.id);
+                }}
+                style={{ animationDelay: `${200 + index * 50}ms` }}
+                className={`
                 stagger-item group relative aspect-[3/4] cursor-pointer rounded-2xl overflow-hidden transition-all duration-300
                 ${isSelected ? 'ring-4 ring-slate-900 ring-offset-2 ring-offset-white/0 shadow-xl' : 'hover:shadow-lg hover:-translate-y-1'}
               `}
-            >
-              <img
-                src={outfit.url}
-                alt={outfit.alt}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-              <div className={`absolute inset-0 transition-colors duration-300 ${isSelected ? 'bg-black/20' : 'bg-transparent group-hover:bg-black/10'}`}>
-                {isSelected && (
-                  <div className="absolute top-3 right-3 bg-slate-900 text-white rounded-full p-1.5 shadow-sm animate-scaleIn">
-                    <Check size={16} strokeWidth={3} />
-                  </div>
-                )}
+              >
+                <img
+                  src={outfit.url}
+                  alt={outfit.alt}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+                <div className={`absolute inset-0 transition-colors duration-300 ${isSelected ? 'bg-black/20' : 'bg-transparent group-hover:bg-black/10'}`}>
+                  {isSelected && (
+                    <div className="absolute top-3 right-3 bg-slate-900 text-white rounded-full p-1.5 shadow-sm animate-scaleIn">
+                      <Check size={16} strokeWidth={3} />
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       <div
-        className="mt-auto pt-6 border-t border-slate-200/60 flex flex-col sm:flex-row justify-between items-center gap-4 stagger-item"
+        className="shrink-0 mt-auto pt-4 md:pt-6 border-t border-slate-200/60 flex flex-col sm:flex-row justify-between items-center gap-4 stagger-item bg-white/90 md:bg-transparent backdrop-blur-md md:backdrop-blur-none -mx-4 px-4 md:-mx-0 md:px-0 pb-4 md:pb-0"
         style={{ animationDelay: '500ms' }}
       >
         <button
