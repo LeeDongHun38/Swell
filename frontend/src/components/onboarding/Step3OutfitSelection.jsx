@@ -38,7 +38,7 @@ export function Step3OutfitSelection({
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0 -mr-2 pr-2">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 mb-4 pb-20 md:pb-0">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 mb-4 pb-20 md:pb-0 p-2">
           {currentTabOutfits.map((outfit, index) => {
             const isSelected = selectedOutfits.includes(outfit.id);
             return (

@@ -24,7 +24,7 @@ export function Step2TagSelection({
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0 -mr-2 pr-2">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-4 pb-20 md:pb-0">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-4 pb-20 md:pb-0 p-1">
           {tags.map((tag, index) => {
             const isSelected = selectedTagIds.includes(tag.id);
             return (
